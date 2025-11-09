@@ -1,0 +1,56 @@
+---
+# Basic ywatch configuration example
+# This monitors a single directory for configuration file changes
+
+name: "BasicWatcher"
+
+# Logging configuration
+logging:
+  level: INFO
+  console: true
+  # file: "/var/log/ywatch/basic.log"
+
+# Guard/administrator contact info
+guard:
+  name: "System Administrator"
+  email: "admin@example.com"
+
+# Email defaults
+email:
+  from: "ywatch@example.com"
+  smtp_host: "localhost"
+  smtp_port: 25
+
+# Watchlists
+watchlists:
+  - name: "config_files"
+    description: "Monitor configuration file changes"
+    enabled: true
+
+    contacts:
+      - email: "admin@example.com"
+        name: "Administrator"
+
+    watches:
+      - path: "/etc/myapp"
+        recursive: false
+
+        events:
+          - create
+          - modify
+          - delete
+
+        filters:
+          include: '\.(conf|cfg|ini|yml|yaml)$'
+          exclude: '~$|\.swp$|\.bak$|\.tmp$'
+
+        actions:
+          - type: console
+            level: INFO
+            format: "Config file %event%: %fullpath%"
+
+          - type: syslog
+            priority: info
+            facility: user
+            message: "Config %event%: %fullpath%"
+

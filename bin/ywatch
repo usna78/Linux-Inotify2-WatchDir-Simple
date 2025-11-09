@@ -1,0 +1,275 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use Getopt::Long qw(:config no_ignore_case);
+use Pod::Usage;
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+
+use Linux::Inotify2::WatchDir::Simple;
+
+=head1 NAME
+
+ywatch - Simple filesystem monitoring tool
+
+=head1 SYNOPSIS
+
+    ywatch --config /etc/ywatch/monitor.yml [options]
+
+    Options:
+        --config FILE       Path to YAML or JSON configuration file (required)
+        --daemon            Run as daemon (background process)
+        --debug             Enable debug logging
+        --validate          Validate configuration and exit
+        --help              Show this help message
+        --version           Show version information
+
+    Signals:
+        SIGHUP              Reload configuration
+        SIGTERM/SIGINT      Graceful shutdown
+
+=head1 DESCRIPTION
+
+ywatch is a simple, polling-based filesystem monitoring tool that watches
+directories for changes and triggers configurable actions (email, syslog,
+commands).
+
+This tool uses a straightforward 1-second polling approach, making it perfect
+for configuration file monitoring, batch file processing, and other scenarios
+where sub-second response time is not critical.
+
+The name "ywatch" stands for "YAML watch" though both YAML and JSON configuration
+formats are supported.
+
+=head1 EXAMPLES
+
+    # Validate configuration
+    ywatch --config /etc/ywatch/monitor.yml --validate
+
+    # Run in foreground with debug logging
+    ywatch --config /etc/ywatch/monitor.yml --debug
+
+    # Run as daemon
+    ywatch --config /etc/ywatch/monitor.yml --daemon
+
+    # Reload configuration (send SIGHUP to running process)
+    kill -HUP $(cat /var/run/ywatch/watcher.pid)
+
+=cut
+
+# Parse command line options
+my %opts = (
+    config   => undef,
+    daemon   => 0,
+    debug    => 0,
+    validate => 0,
+    help     => 0,
+    version  => 0,
+);
+
+GetOptions(
+    'config|c=s' => \$opts{config},
+    'daemon|d'   => \$opts{daemon},
+    'debug'      => \$opts{debug},
+    'validate|v' => \$opts{validate},
+    'help|h'     => \$opts{help},
+    'version'    => \$opts{version},
+) or pod2usage(2);
+
+# Show help
+pod2usage(1) if $opts{help};
+
+# Show version
+if ($opts{version}) {
+    print "ywatch version $Linux::Inotify2::WatchDir::Simple::VERSION\n";
+    print "Part of Linux::Inotify2::WatchDir::Simple\n";
+    print "Powered by Linux::Inotify2\n";
+    exit 0;
+}
+
+# Config file is required
+unless ($opts{config}) {
+    print STDERR "Error: --config option is required\n";
+    pod2usage(2);
+}
+
+# Check config file exists
+unless (-f $opts{config}) {
+    print STDERR "Error: Configuration file not found: $opts{config}\n";
+    exit 1;
+}
+
+# Create watcher instance
+my $watcher = eval {
+    Linux::Inotify2::WatchDir::Simple->new(
+        config_file => $opts{config},
+        daemon      => $opts{daemon},
+        debug       => $opts{debug},
+    );
+};
+
+if ($@) {
+    print STDERR "Error initializing watcher: $@\n";
+    exit 1;
+}
+
+# Validate mode
+if ($opts{validate}) {
+    eval {
+        $watcher->validate();
+    };
+
+    if ($@) {
+        print STDERR "Configuration validation failed: $@\n";
+        exit 1;
+    }
+
+    print "Configuration is valid\n";
+    exit 0;
+}
+
+# Run watcher
+eval {
+    $watcher->run();
+};
+
+if ($@) {
+    print STDERR "ywatch error: $@\n";
+    exit 1;
+}
+
+exit 0;
+
+__END__
+
+=head1 CONFIGURATION
+
+Configuration can be specified in either YAML or JSON format. The format is
+auto-detected from the file extension (.yml, .yaml, or .json).
+
+=head2 YAML Example
+
+    ---
+    name: "MyWatcher"
+    pidfile: "/var/run/ywatch/watcher.pid"
+
+    logging:
+      level: INFO
+      file: "/var/log/ywatch/watcher.log"
+
+    guard:
+      name: "System Administrator"
+      email: "admin@example.com"
+
+    email:
+      from: "ywatch@example.com"
+      smtp_host: "localhost"
+
+    watchlists:
+      - name: "config_monitor"
+        watches:
+          - path: "/etc/myapp"
+            recursive: true
+            events:
+              - create
+              - modify
+              - delete
+            filters:
+              include: '\\.conf$'
+            actions:
+              - type: email
+                to: "admin@example.com"
+                subject: "Config changed: %file%"
+              - type: syslog
+                priority: info
+
+=head2 JSON Example
+
+    {
+      "name": "MyWatcher",
+      "pidfile": "/var/run/ywatch/watcher.pid",
+      "logging": {
+        "level": "INFO",
+        "file": "/var/log/ywatch/watcher.log"
+      },
+      "watchlists": [
+        {
+          "name": "config_monitor",
+          "watches": [
+            {
+              "path": "/etc/myapp",
+              "recursive": true,
+              "events": ["create", "modify", "delete"],
+              "actions": [
+                {
+                  "type": "syslog",
+                  "priority": "info"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+
+See L<Linux::Inotify2::WatchDir::Simple::Config> documentation for complete details.
+
+=head1 SYSTEMD INTEGRATION
+
+To run ywatch as a systemd service, create /etc/systemd/system/ywatch@.service:
+
+    [Unit]
+    Description=ywatch filesystem monitor - %i
+    After=network.target
+
+    [Service]
+    Type=simple
+    User=root
+    ExecStart=/usr/local/bin/ywatch --config /etc/ywatch/%i.yml
+    ExecReload=/bin/kill -HUP $MAINPID
+    Restart=always
+
+    [Install]
+    WantedBy=multi-user.target
+
+Then:
+    systemctl daemon-reload
+    systemctl enable ywatch@monitor.service
+    systemctl start ywatch@monitor.service
+
+=head1 PERFORMANCE
+
+This tool uses a simple polling approach with 1-second intervals. This is:
+
+=over 4
+
+=item * Perfect for configuration file monitoring (changes are infrequent)
+
+=item * Suitable for batch file processing directories
+
+=item * Low CPU usage (process sleeps between polls)
+
+=item * Not suitable for high-frequency events or sub-second requirements
+
+=back
+
+For real-time monitoring needs, consider the future Linux::Inotify2::WatchDir::Event
+module or use Linux::Inotify2 directly with an event loop.
+
+=head1 SEE ALSO
+
+L<Linux::Inotify2::WatchDir::Simple> - The underlying module
+
+L<Linux::Inotify2> - Linux inotify interface
+
+=head1 AUTHOR
+
+OpenTransfer Project
+
+=head1 LICENSE
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut

@@ -1,0 +1,324 @@
+---
+# OpenTransfer-specific ywatch configuration
+# This monitors file transfer directories for the OpenTransfer MFT system
+
+name: "OpenTransferWatcher"
+pidfile: "/var/run/ywatch/opentransfer.pid"
+
+# Logging configuration
+logging:
+  level: INFO
+  console: false
+  file: "/var/log/ywatch/opentransfer.log"
+
+# Guard/administrator contact info
+guard:
+  name: "OpenTransfer Administrator"
+  email: "opentransfer-admin@example.com"
+
+# Email defaults
+email:
+  from: "opentransfer@example.com"
+  smtp_host: "localhost"
+  smtp_port: 25
+
+# Watchlists for OpenTransfer monitoring
+watchlists:
+  # Monitor pickup directories on transfer servers
+  - name: "pickup_directories"
+    description: "Monitor pickup directories for new files"
+    enabled: true
+
+    contacts:
+      - email: "opentransfer-ops@example.com"
+        name: "OpenTransfer Operations"
+
+    watches:
+      - path: "/sftp/pickup/customer1"
+        recursive: false
+
+        events:
+          - create
+          - moved_to
+          - close_write
+
+        filters:
+          include: '\.(txt|csv|xml|dat|pdf)$'
+          exclude: '~$|\.tmp$|\.partial$'
+
+        actions:
+          - type: console
+            level: INFO
+            format: "Pickup file arrived: %file% in %path%"
+
+          - type: syslog
+            priority: info
+            facility: local2
+            message: "OpenTransfer pickup: %file%"
+
+          - type: command
+            execute: "/opt/opentransfer/bin/trigger-transfer.sh '%fullpath%' 'customer1'"
+            async: true
+            timeout: 30
+
+      - path: "/sftp/pickup/customer2"
+        recursive: false
+
+        events:
+          - create
+          - moved_to
+          - close_write
+
+        filters:
+          include: '\.(txt|csv|xml|dat|pdf)$'
+          exclude: '~$|\.tmp$|\.partial$'
+
+        actions:
+          - type: console
+            level: INFO
+            format: "Pickup file arrived: %file% in %path%"
+
+          - type: syslog
+            priority: info
+            facility: local2
+            message: "OpenTransfer pickup: %file%"
+
+          - type: command
+            execute: "/opt/opentransfer/bin/trigger-transfer.sh '%fullpath%' 'customer2'"
+            async: true
+            timeout: 30
+
+  # Monitor dropoff directories
+  - name: "dropoff_directories"
+    description: "Monitor dropoff directories for completed transfers"
+    enabled: true
+
+    contacts:
+      - email: "opentransfer-ops@example.com"
+        name: "OpenTransfer Operations"
+
+    watches:
+      - path: "/sftp/dropoff/customer1"
+        recursive: false
+
+        events:
+          - create
+          - close_write
+
+        filters:
+          include: ''  # Monitor all files
+
+        actions:
+          - type: console
+            level: INFO
+            format: "Dropoff complete: %file%"
+
+          - type: syslog
+            priority: info
+            facility: local2
+            message: "OpenTransfer dropoff: %file%"
+
+          - type: email
+            to: "customer1@example.com"
+            subject: "File delivered: %file%"
+            body: |
+              Your file has been successfully delivered:
+              
+              File: %file%
+              Delivery time: %timestamp%
+              
+              Thank you for using OpenTransfer.
+
+  # Monitor staging directories on DMZ servers
+  - name: "dmz_staging"
+    description: "Monitor DMZ server staging directories"
+    enabled: true
+
+    contacts:
+      - email: "opentransfer-ops@example.com"
+        name: "OpenTransfer Operations"
+
+    watches:
+      - path: "/staging/inbound"
+        recursive: false
+
+        events:
+          - create
+          - moved_to
+
+        filters:
+          include: ''  # Monitor all files
+
+        actions:
+          - type: console
+            level: INFO
+            format: "DMZ inbound: %file%"
+
+          - type: syslog
+            priority: info
+            facility: local2
+            message: "DMZ staging inbound: %file%"
+
+      - path: "/staging/outbound"
+        recursive: false
+
+        events:
+          - create
+          - moved_to
+
+        filters:
+          include: ''  # Monitor all files
+
+        actions:
+          - type: console
+            level: INFO
+            format: "DMZ outbound: %file%"
+
+          - type: syslog
+            priority: info
+            facility: local2
+            message: "DMZ staging outbound: %file%"
+
+  # Monitor control server work directories
+  - name: "control_server_work"
+    description: "Monitor control server work directories"
+    enabled: true
+
+    contacts:
+      - email: "opentransfer-ops@example.com"
+        name: "OpenTransfer Operations"
+
+    watches:
+      - path: "/work/transfers"
+        recursive: false
+
+        events:
+          - create
+          - delete
+          - close_write
+
+        filters:
+          include: ''  # Monitor all files
+
+        actions:
+          - type: console
+            level: INFO
+            format: "Control work directory %event%: %file%"
+
+          - type: syslog
+            priority: info
+            facility: local2
+            message: "Control work: %event% %file%"
+
+  # Monitor error/failed transfer directories
+  - name: "error_directories"
+    description: "Monitor directories for failed transfers"
+    enabled: true
+
+    contacts:
+      - email: "opentransfer-ops@example.com"
+        name: "OpenTransfer Operations"
+      - email: "opentransfer-admin@example.com"
+        name: "OpenTransfer Administrator"
+
+    watches:
+      - path: "/sftp/errors"
+        recursive: true
+
+        events:
+          - create
+          - moved_to
+
+        filters:
+          include: ''  # Monitor all files
+
+        actions:
+          - type: console
+            level: ERROR
+            format: "TRANSFER FAILED: %fullpath%"
+
+          - type: syslog
+            priority: err
+            facility: local2
+            message: "OpenTransfer ERROR: %fullpath%"
+
+          - type: email
+            to: "opentransfer-ops@example.com"
+            subject: "[ERROR] Transfer failed: %file%"
+            body: |
+              A file transfer has failed:
+              
+              File: %file%
+              Location: %fullpath%
+              Time: %timestamp%
+              
+              Please investigate and retry if necessary.
+
+  # Monitor OpenTransfer log directories
+  - name: "opentransfer_logs"
+    description: "Monitor OpenTransfer application logs"
+    enabled: true
+
+    contacts:
+      - email: "opentransfer-admin@example.com"
+        name: "OpenTransfer Administrator"
+
+    watches:
+      - path: "/var/log/opentransfer"
+        recursive: false
+
+        events:
+          - modify
+          - close_write
+
+        filters:
+          include: '\.log$'
+          exclude: '\.gz$'
+
+        actions:
+          - type: command
+            execute: "grep -i 'error\\|fatal\\|critical' '%fullpath%' | tail -10 | logger -t opentransfer-error -p local2.err"
+            async: true
+            timeout: 5
+
+  # Monitor configuration changes
+  - name: "config_monitoring"
+    description: "Monitor OpenTransfer configuration changes"
+    enabled: true
+
+    contacts:
+      - email: "opentransfer-admin@example.com"
+        name: "OpenTransfer Administrator"
+
+    watches:
+      - path: "/etc/opentransfer"
+        recursive: true
+
+        events:
+          - create
+          - modify
+          - delete
+
+        filters:
+          include: '\.(conf|yml|yaml|json)$'
+          exclude: '~$|\.swp$|\.bak$'
+
+        actions:
+          - type: console
+            level: WARN
+            format: "Config %event%: %fullpath%"
+
+          - type: syslog
+            priority: warning
+            facility: local2
+            message: "OpenTransfer config %event%: %fullpath%"
+
+          - type: email
+            to: "opentransfer-admin@example.com"
+            subject: "[CONFIG CHANGE] OpenTransfer: %file%"
+            body: |
+              OpenTransfer configuration has been modified:
+              
+              File: %fullpath%
+              Event: %event%
+              Time: %timestamp%

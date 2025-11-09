@@ -1,0 +1,281 @@
+---
+# Advanced ywatch configuration example
+# This demonstrates multiple watchlists with various action types
+
+name: "AdvancedWatcher"
+pidfile: "/var/run/ywatch/advanced.pid"
+
+# Logging configuration
+logging:
+  level: INFO
+  console: true
+  file: "/var/log/ywatch/advanced.log"
+
+# Guard/administrator contact info
+guard:
+  name: "System Administrator"
+  email: "admin@example.com"
+
+# Email defaults
+email:
+  from: "ywatch@example.com"
+  smtp_host: "localhost"
+  smtp_port: 25
+
+# Multiple watchlists demonstrating different scenarios
+watchlists:
+  # Watchlist 1: Configuration file monitoring
+  - name: "config_files"
+    description: "Monitor critical configuration files"
+    enabled: true
+
+    contacts:
+      - email: "admin@example.com"
+        name: "Administrator"
+      - email: "ops@example.com"
+        name: "Operations Team"
+
+    watches:
+      - path: "/etc/myapp"
+        recursive: false
+
+        events:
+          - create
+          - modify
+          - delete
+
+        filters:
+          include: '\.(conf|cfg|ini|yml|yaml)$'
+          exclude: '~$|\.swp$|\.bak$|\.tmp$'
+
+        actions:
+          - type: console
+            level: WARN
+            format: "Config file %event%: %fullpath%"
+
+          - type: syslog
+            priority: warning
+            facility: local0
+            message: "Config %event%: %fullpath%"
+
+          - type: email
+            to: "admin@example.com"
+            subject: "[ALERT] Config file changed: %file%"
+            body: |
+              Configuration file changed:
+              
+              File: %fullpath%
+              Event: %event%
+              Time: %timestamp%
+              
+              Please review this change immediately.
+
+  # Watchlist 2: Log file monitoring
+  - name: "log_files"
+    description: "Monitor application log directory"
+    enabled: true
+
+    contacts:
+      - email: "logs@example.com"
+        name: "Log Monitoring Team"
+
+    watches:
+      - path: "/var/log/myapp"
+        recursive: true
+
+        events:
+          - create
+          - modify
+          - close_write
+
+        filters:
+          include: '\.(log|txt)$'
+          exclude: '\.gz$|\.zip$'
+
+        actions:
+          - type: console
+            level: INFO
+            format: "Log file %event%: %file%"
+
+          - type: command
+            execute: "/usr/local/bin/process-log.sh '%fullpath%'"
+            async: true
+            timeout: 60
+
+  # Watchlist 3: Data processing directory
+  - name: "data_processing"
+    description: "Monitor incoming data files for processing"
+    enabled: true
+
+    contacts:
+      - email: "data-team@example.com"
+        name: "Data Processing Team"
+
+    watches:
+      - path: "/data/incoming"
+        recursive: false
+
+        events:
+          - create
+          - moved_to
+
+        filters:
+          include: '\.(csv|xml|json)$'
+
+        actions:
+          - type: console
+            level: INFO
+            format: "Data file arrived: %file%"
+
+          - type: syslog
+            priority: info
+            facility: local1
+            message: "Data file: %file%"
+
+          - type: command
+            execute: "/usr/local/bin/process-data.sh '%fullpath%' '%file%'"
+            async: true
+            timeout: 300
+
+          - type: email
+            to: "data-team@example.com"
+            subject: "Data file ready: %file%"
+            body: |
+              New data file available for processing:
+              
+              File: %file%
+              Full path: %fullpath%
+              Time: %timestamp%
+              
+              Processing has been initiated automatically.
+
+  # Watchlist 4: Security monitoring
+  - name: "security_monitor"
+    description: "Monitor sensitive directories for unauthorized changes"
+    enabled: true
+
+    contacts:
+      - email: "security@example.com"
+        name: "Security Team"
+
+    watches:
+      - path: "/etc/passwd"
+        recursive: false
+
+        events:
+          - modify
+          - attrib
+          - delete
+
+        actions:
+          - type: console
+            level: ERROR
+            format: "SECURITY ALERT: /etc/passwd was modified!"
+
+          - type: syslog
+            priority: alert
+            facility: auth
+            message: "SECURITY: /etc/passwd %event%"
+
+          - type: email
+            to: "security@example.com"
+            subject: "[SECURITY ALERT] /etc/passwd modified"
+            body: |
+              CRITICAL SECURITY ALERT
+              
+              The system password file has been modified!
+              
+              Event: %event%
+              Time: %timestamp%
+              
+              Immediate investigation required.
+
+      - path: "/root/.ssh"
+        recursive: true
+
+        events:
+          - create
+          - modify
+          - delete
+
+        filters:
+          include: ''  # Monitor all files
+
+        actions:
+          - type: console
+            level: ERROR
+            format: "SECURITY ALERT: SSH key change in %fullpath%"
+
+          - type: syslog
+            priority: alert
+            facility: auth
+            message: "SECURITY: SSH key %event%: %fullpath%"
+
+          - type: email
+            to: "security@example.com"
+            subject: "[SECURITY ALERT] SSH key changed: %file%"
+            body: |
+              CRITICAL SECURITY ALERT
+              
+              SSH key file has been modified!
+              
+              File: %fullpath%
+              Event: %event%
+              Time: %timestamp%
+              
+              Immediate investigation required.
+
+  # Watchlist 5: Batch file processing
+  - name: "batch_processing"
+    description: "Monitor batch processing directories"
+    enabled: true
+
+    contacts:
+      - email: "batch@example.com"
+        name: "Batch Processing Team"
+
+    watches:
+      - path: "/batch/input"
+        recursive: false
+
+        events:
+          - create
+          - moved_to
+
+        filters:
+          include: '\.(txt|dat|csv)$'
+
+        actions:
+          - type: console
+            level: INFO
+            format: "Batch file: %file%"
+
+          - type: command
+            execute: "/usr/local/bin/batch-process.sh '%fullpath%'"
+            async: true
+            timeout: 600
+
+      - path: "/batch/output"
+        recursive: false
+
+        events:
+          - create
+          - close_write
+
+        filters:
+          include: '\.(out|result)$'
+
+        actions:
+          - type: console
+            level: INFO
+            format: "Batch output: %file%"
+
+          - type: email
+            to: "batch@example.com"
+            subject: "Batch processing complete: %file%"
+            body: |
+              Batch processing has completed:
+              
+              Output file: %file%
+              Location: %fullpath%
+              Time: %timestamp%

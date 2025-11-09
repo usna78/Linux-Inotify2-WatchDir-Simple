@@ -1,0 +1,34 @@
+# Version control
+\.git
+\.gitignore
+\.github
+
+# Build artifacts
+^blib/
+^pm_to_blib
+^Makefile$
+^Makefile\.old$
+^MYMETA\.
+\.tar\.gz$
+^Linux-Inotify2-WatchDir-Simple-
+
+# Editor artifacts
+~$
+\.swp$
+\.bak$
+\.orig$
+\#$
+
+# OS artifacts
+\.DS_Store$
+Thumbs\.db$
+
+# Perl artifacts
+^cover_db/
+\.bs$
+\.o$
+
+# Development files
+^TODO$
+^NOTES$
+^\.
