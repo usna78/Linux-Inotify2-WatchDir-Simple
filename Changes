@@ -1,0 +1,19 @@
+Revision history for Linux::Inotify2::WatchDir::Simple
+
+0.01    2025-11-08
+        - Initial CPAN release
+        - Simple polling-based filesystem monitoring
+        - YAML and JSON configuration support
+        - Multiple watchlist capability
+        - Event filtering with regex patterns
+        - Multiple action types: email, syslog, console, command
+        - Recursive directory monitoring
+        - Signal handling (SIGHUP reload, SIGTERM/SIGINT shutdown)
+        - Daemon mode with PID file management
+        - systemd integration with template service file
+        - Log::Log4perl integration for structured logging
+        - Email::Sender for flexible email delivery
+        - Comprehensive POD documentation
+        - Example configurations included
+        - Test suite for core functionality
+

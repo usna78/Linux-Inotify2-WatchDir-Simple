@@ -1,0 +1,34 @@
+[Unit]
+Description=ywatch filesystem monitor - %i
+Documentation=man:ywatch.pl(1)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+# Adjust paths as needed for your installation
+ExecStart=/usr/local/bin/ywatch.pl --config /etc/ywatch/%i.yml
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Restart on failure
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ywatch-%i
+
+# Security hardening (adjust as needed)
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Resource limits (optional)
+# LimitNOFILE=65536
+# MemoryLimit=512M
+
+[Install]
+WantedBy=multi-user.target
+
