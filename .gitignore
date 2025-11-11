@@ -1,0 +1,38 @@
+# Perl build artifacts
+Makefile
+Makefile.old
+Build
+Build.bat
+_build/
+blib/
+.build/
+cover_db/
+inc/
+*.bs
+*.o
+*.c
+*.h
+
+# Perl module build files
+MYMETA.*
+MYMETA.json
+MYMETA.yml
+META.yml
+pm_to_blib
+
+# Editor and IDE files
+*~
+*.swp
+*.swo
+.*.sw?
+.DS_Store
+
+# Test and coverage files
+nytprof.out
+*.prove
+.prove
+
+# Temporary files
+*.tmp
+*.bak
+*.old
