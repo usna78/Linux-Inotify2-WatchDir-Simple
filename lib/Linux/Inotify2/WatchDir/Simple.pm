@@ -226,14 +226,9 @@ sub _build_logger {
     # Set log level
     my $level = $self->debug ? 'DEBUG' : ($config->{level} || 'INFO');
 
-    # Configure Log::Log4perl
-    my $log_config = qq{
-        log4perl.logger = $level, Screen
-        log4perl.appender.Screen = Log::Log4perl::Appender::Screen
-        log4perl.appender.Screen.stderr = 1
-        log4perl.appender.Screen.layout = Log::Log4perl::Layout::PatternLayout
-        log4perl.appender.Screen.layout.ConversionPattern = [%d] [%p] %m%n
-    };
+    # Determine appenders based on configuration
+    my $appenders = 'Screen';
+    my $file_config = '';
 
     # Add file appender if specified
     if ($config->{file}) {
@@ -245,8 +240,8 @@ sub _build_logger {
             mkdir($logdir, 0755) or warn "Cannot create log directory $logdir: $!";
         }
 
-        $log_config .= qq{
-        log4perl.logger = $level, Screen, Logfile
+        $appenders .= ', Logfile';
+        $file_config = qq{
         log4perl.appender.Logfile = Log::Log4perl::Appender::File
         log4perl.appender.Logfile.filename = $logfile
         log4perl.appender.Logfile.mode = append
@@ -254,6 +249,16 @@ sub _build_logger {
         log4perl.appender.Logfile.layout.ConversionPattern = [%d] [%p] %m%n
         };
     }
+
+    # Configure Log::Log4perl (logger defined only once)
+    my $log_config = qq{
+        log4perl.logger = $level, $appenders
+        log4perl.appender.Screen = Log::Log4perl::Appender::Screen
+        log4perl.appender.Screen.stderr = 1
+        log4perl.appender.Screen.layout = Log::Log4perl::Layout::PatternLayout
+        log4perl.appender.Screen.layout.ConversionPattern = [%d] [%p] %m%n
+        $file_config
+    };
 
     Log::Log4perl->init(\$log_config);
     return Log::Log4perl->get_logger();
