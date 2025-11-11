@@ -114,7 +114,7 @@ and does not match exclude pattern).
 sub matches {
     my ($self, $filepath) = @_;
 
-    return 0 unless defined $filepath;
+    return 0 unless defined $filepath && $filepath ne '';
 
     # Get just the filename component
     my $filename = basename($filepath);
@@ -152,7 +152,7 @@ Useful for more complex filtering scenarios.
 sub matches_path {
     my ($self, $filepath) = @_;
 
-    return 0 unless defined $filepath;
+    return 0 unless defined $filepath && $filepath ne '';
 
     # If include pattern is defined, path must match it
     if ($self->include_regex) {

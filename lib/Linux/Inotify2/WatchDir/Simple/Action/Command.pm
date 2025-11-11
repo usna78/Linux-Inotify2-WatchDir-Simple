@@ -29,10 +29,10 @@ Executes shell commands in response to filesystem events.
 
 =cut
 
-has 'execute' => (
+has 'command_template' => (
     is       => 'lazy',
     isa      => Str,
-    builder  => '_build_execute',
+    builder  => '_build_command_template',
 );
 
 has 'async' => (
@@ -53,7 +53,7 @@ has 'shell' => (
     builder => '_build_shell',
 );
 
-sub _build_execute {
+sub _build_command_template {
     my $self = shift;
 
     die "Command action requires 'execute' parameter"
@@ -90,7 +90,7 @@ Executes the command.
 sub execute {
     my ($self, $context) = @_;
 
-    my $command = $self->expand_variables($self->execute, $context);
+    my $command = $self->expand_variables($self->command_template, $context);
 
     $self->logger->debug("Executing command: $command");
 

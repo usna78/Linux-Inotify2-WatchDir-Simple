@@ -42,7 +42,7 @@ has 'logger' => (
 );
 
 has 'data' => (
-    is      => 'lazy',
+    is      => 'ro',
     isa     => HashRef,
     builder => '_build_data',
 );
