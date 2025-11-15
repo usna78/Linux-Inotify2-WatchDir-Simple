@@ -1,0 +1,60 @@
+---
+# PDF Monitor Configuration
+# Monitors /home/openxfer/test/ywatch/inbound recursively for PDF files
+# Logs to syslog and executes opentransfer.pl when PDFs are written
+
+name: "PDF Documentation Monitor"
+pidfile: "/home/openxfer/test/ywatch/pid/pdf_ywatch.pid"
+
+# Logging configuration
+logging:
+  level: INFO
+  console: true
+  file: "/home/openxfer/test/ywatch/logs/pdf-monitor.log"
+
+# Actions to execute on startup
+startup_actions:
+  - type: syslog
+    priority: info
+    facility: local0
+    message: "PDF Documentation Monitor (PID: %pid%) started - watching /home/openxfer/test/ywatch/inbound"
+  - type: console
+    level: INFO
+    format: "PDF Monitor is now running - PID: %pid%"
+
+# Watchlist definitions
+watchlists:
+  - name: "pdf_directory_watch"
+    description: "Monitor  /home/openxfer/test/ywatch/inbound directory for completed PDF files"
+    enabled: true
+
+    watches:
+      - path: "/home/openxfer/test/ywatch/inbound"
+        recursive: true
+
+        # Monitor for file close after writing (file is complete)
+        events:
+          - close_write
+
+        # Only match PDF files (case-insensitive)
+        filters:
+          include: '(?i)\.pdf$'
+
+        # Actions to take when PDF file closes
+        actions:
+          # Log to console (useful for foreground testing)
+          - type: console
+            level: INFO
+            format: "PDF closed: %file% - Full path: %fullpath% - Time: %timestamp%"
+
+          # Log to syslog
+          - type: syslog
+            priority: info
+            facility: local0
+            message: "PDF closed: %fullpath% at %timestamp%"
+
+          # Execute OpenTransfer processing
+          - type: command
+            execute: "/home/openxfer/OpenTransfer/bin/opentransfer.pl --config-id=16"
+            async: true
+            timeout: 300

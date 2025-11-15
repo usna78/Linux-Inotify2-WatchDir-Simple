@@ -1,0 +1,60 @@
+{
+  "name": "PDF Documentation Monitor",
+  "pidfile": "/home/openxfer/test/ywatch/pid/pdf_ywatch.pid",
+  "logging": {
+    "level": "INFO",
+    "console": true,
+    "file": "/home/openxfer/test/ywatch/logs/pdf-monitor.log"
+  },
+  "startup_actions": [
+    {
+      "type": "syslog",
+      "priority": "info",
+      "facility": "local0",
+      "message": "PDF Documentation Monitor (PID: %pid%) started - watching /home/openxfer/test/ywatch/inbound"
+    },
+    {
+      "type": "console",
+      "level": "INFO",
+      "format": "PDF Monitor is now running - PID: %pid%"
+    }
+  ],
+  "watchlists": [
+    {
+      "name": "pdf_directory_watch",
+      "description": "Monitor /home/openxfer/test/ywatch/inbound directory for completed PDF files",
+      "enabled": true,
+      "watches": [
+        {
+          "path": "/home/openxfer/test/ywatch/inbound",
+          "recursive": true,
+          "events": [
+            "close_write"
+          ],
+          "filters": {
+            "include": "(?i)\\.pdf$"
+          },
+          "actions": [
+            {
+              "type": "console",
+              "level": "INFO",
+              "format": "PDF closed: %file% - Full path: %fullpath% - Time: %timestamp%"
+            },
+            {
+              "type": "syslog",
+              "priority": "info",
+              "facility": "local0",
+              "message": "PDF closed: %fullpath% at %timestamp%"
+            },
+            {
+              "type": "command",
+              "execute": "/home/openxfer/OpenTransfer/bin/opentransfer.pl --config-id=16",
+              "async": true,
+              "timeout": 300
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
