@@ -8,31 +8,10 @@ use POSIX ":sys_wait_h";
 
 extends 'Linux::Inotify2::WatchDir::Simple::Action';
 
-=head1 NAME
-
-Linux::Inotify2::WatchDir::Simple::Action::Command - Execute shell commands
-
-=head1 SYNOPSIS
-
-    # In YAML config:
-    actions:
-      - type: command
-        execute: "/usr/local/bin/process.sh %fullpath%"
-        async: true
-        timeout: 30
-
-=head1 DESCRIPTION
-
-Executes shell commands in response to filesystem events.
-
-=head1 ATTRIBUTES
-
-=cut
-
 has 'command_template' => (
-    is       => 'lazy',
-    isa      => Str,
-    builder  => '_build_command_template',
+    is      => 'lazy',
+    isa     => Str,
+    builder => '_build_command_template',
 );
 
 has 'async' => (
@@ -57,14 +36,14 @@ sub _build_command_template {
     my $self = shift;
 
     die "Command action requires 'execute' parameter"
-        unless $self->config->{execute};
+      unless $self->config->{execute};
 
     return $self->config->{execute};
 }
 
 sub _build_async {
     my $self = shift;
-    return $self->config->{async} // 1;  # Default to async
+    return $self->config->{async} // 1;    # Default to async
 }
 
 sub _build_timeout {
@@ -77,32 +56,23 @@ sub _build_shell {
     return $self->config->{shell} || '/bin/bash';
 }
 
-=head1 METHODS
-
-=cut
-
-=head2 execute
-
-Executes the command.
-
-=cut
-
 sub execute {
-    my ($self, $context) = @_;
+    my ( $self, $context ) = @_;
 
-    my $command = $self->expand_variables($self->command_template, $context);
+    my $command = $self->expand_variables( $self->command_template, $context );
 
     $self->logger->debug("Executing command: $command");
 
-    if ($self->async) {
+    if ( $self->async ) {
         $self->_execute_async($command);
-    } else {
+    }
+    else {
         $self->_execute_sync($command);
     }
 }
 
 sub _execute_sync {
-    my ($self, $command) = @_;
+    my ( $self, $command ) = @_;
 
     my $output;
     my $exit_code;
@@ -110,49 +80,54 @@ sub _execute_sync {
     eval {
         # Set up alarm for timeout
         local $SIG{ALRM} = sub { die "Command timeout\n" };
-        alarm($self->timeout);
+        alarm( $self->timeout );
 
         # Execute command
-        $output = `$command 2>&1`;
+        $output    = `$command 2>&1`;
         $exit_code = $? >> 8;
 
-        alarm(0);  # Cancel alarm
+        alarm(0);    # Cancel alarm
     };
 
     if ($@) {
-        if ($@ eq "Command timeout\n") {
-            $self->logger->error("Command timed out after " . $self->timeout . " seconds: $command");
-        } else {
+        if ( $@ eq "Command timeout\n" ) {
+            $self->logger->error( "Command timed out after "
+                  . $self->timeout
+                  . " seconds: $command" );
+        }
+        else {
             $self->logger->error("Command execution failed: $@");
         }
         return;
     }
 
-    if ($exit_code != 0) {
+    if ( $exit_code != 0 ) {
         $self->logger->warn("Command exited with code $exit_code: $command");
         $self->logger->debug("Output: $output") if $output;
-    } else {
+    }
+    else {
         $self->logger->debug("Command completed successfully");
         $self->logger->debug("Output: $output") if $output;
     }
 }
 
 sub _execute_async {
-    my ($self, $command) = @_;
+    my ( $self, $command ) = @_;
 
     my $pid = fork();
 
-    if (!defined $pid) {
+    if ( !defined $pid ) {
         $self->logger->error("Fork failed: $!");
         return;
     }
 
-    if ($pid == 0) {
+    if ( $pid == 0 ) {
+
         # Child process
         eval {
             # Set up alarm for timeout
-            local $SIG{ALRM} = sub { exit(124) };  # 124 = timeout exit code
-            alarm($self->timeout);
+            local $SIG{ALRM} = sub { exit(124) };    # 124 = timeout exit code
+            alarm( $self->timeout );
 
             # Execute command
             exec($command);
@@ -170,16 +145,47 @@ sub _execute_async {
 
     # Non-blocking wait to reap zombie processes
     $SIG{CHLD} = sub {
-        while ((my $child = waitpid(-1, WNOHANG)) > 0) {
+        while ( ( my $child = waitpid( -1, WNOHANG ) ) > 0 ) {
             my $exit_code = $? >> 8;
-            if ($exit_code == 124) {
+            if ( $exit_code == 124 ) {
                 $self->logger->warn("Child process $child timed out");
-            } elsif ($exit_code != 0) {
-                $self->logger->warn("Child process $child exited with code $exit_code");
+            }
+            elsif ( $exit_code != 0 ) {
+                $self->logger->warn(
+                    "Child process $child exited with code $exit_code");
             }
         }
     };
 }
+
+1;
+
+__END__
+
+=head1 NAME
+
+Linux::Inotify2::WatchDir::Simple::Action::Command - Execute shell commands
+
+=head1 SYNOPSIS
+
+    # In YAML config:
+    actions:
+      - type: command
+        execute: "/usr/local/bin/process.sh %fullpath%"
+        async: true
+        timeout: 30
+
+=head1 DESCRIPTION
+
+Executes shell commands in response to filesystem events.
+
+=head1 ATTRIBUTES
+
+=head1 METHODS
+
+=head2 execute
+
+Executes the command.
 
 =head1 SECURITY CONSIDERATIONS
 
@@ -212,5 +218,3 @@ This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-
-1;

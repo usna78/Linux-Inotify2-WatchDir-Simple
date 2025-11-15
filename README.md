@@ -1,38 +1,55 @@
 # Linux::Inotify2::WatchDir::Simple
 
-Simple polling-based filesystem monitoring for Linux using inotify.
+Simple event-driven filesystem monitoring for Linux using inotify.
 
 ## Description
 
-**Linux::Inotify2::WatchDir::Simple** is a straightforward filesystem monitoring tool that watches directories for changes and triggers configurable actions. It uses a simple polling approach with 1-second intervals, making it perfect for configuration file monitoring, batch file processing, and other scenarios where sub-second response time is not critical.
+**Linux::Inotify2::WatchDir::Simple** is a straightforward filesystem monitoring tool that watches directories for changes and triggers configurable actions. It uses Linux inotify for efficient, event-driven monitoring, making it perfect for configuration file monitoring, batch file processing, and other scenarios requiring reliable change detection.
 
 The name "ywatch" (the included binary) stands for "YAML watch," though both YAML and JSON configuration formats are supported.
 
 ## Why "Simple"?
 
-This module deliberately uses a straightforward polling architecture instead of event loops. This approach:
+**ywatch is single-purpose**: it only monitors filesystems. Because it doesn't need to juggle multiple types of I/O (network connections, timers, user input, etc.), it can use a straightforward blocking design.
 
-- **Minimizes dependencies** - No event loop frameworks required
-- **Reduces complexity** - Easy to understand and maintain
-- **Perfectly adequate** - 1-second polling is fine for most file monitoring needs
-- **Low resource usage** - Process sleeps between polls
+### The Blocking Advantage
 
-### When to Use
+When your process only cares about one type of event (filesystem changes), you can simply:
+1. Block waiting for the kernel to notify you of filesystem events
+2. Process those events immediately when they occur
+3. Go back to blocking
 
-✅ Perfect for:
-- Configuration file monitoring (changes are infrequent)
+This is **more efficient** than event loops because:
+- No framework overhead
+- No event loop polling multiple sources
+- Process sleeps in the kernel (zero CPU) until events arrive
+- Events are handled immediately when they occur
+
+### When Event Loops ARE Needed
+
+Event loops (AnyEvent, POE, Mojo) are designed for **complex applications** that monitor multiple I/O sources:
+- Web server handling HTTP requests **AND** watching config files
+- Database application with network connections **AND** filesystem monitoring
+- GUI application responding to user input **AND** file changes
+
+If you only need filesystem monitoring, event loops add unnecessary complexity.
+
+### When to Use ywatch
+
+✅ Perfect for dedicated filesystem monitoring:
+- Configuration file monitoring
 - Batch file processing directories
 - Log file watching
-- Most system administration tasks
+- Any standalone monitoring task
 
-### When NOT to Use
+### When NOT to Use ywatch
 
-❌ Not suitable for:
-- High-frequency events (hundreds per second)
-- Real-time processing (sub-second response required)
-- Applications already using an event loop
+❌ Not suitable when:
+- Your application already uses an event loop for other I/O
+- You need to integrate inotify into a larger event-driven system
+- You're building a multi-purpose daemon handling various I/O types
 
-For real-time needs, watch for the future **Linux::Inotify2::WatchDir::Event** module.
+**In those cases**, use **Linux::Inotify2** directly and integrate it with your event loop.
 
 ## Features
 
@@ -279,7 +296,7 @@ Core Dependencies
 
 Recommended
 
-    JSON::PP (>= 4.00) - For JSON configuration support
+    JSON (>= 4.00) - For JSON configuration support (automatically uses JSON::XS if available, falls back to JSON::PP)
 
 Security Considerations
 Command Execution

@@ -3,41 +3,17 @@ package Linux::Inotify2::WatchDir::Simple::Action::Email;
 use strict;
 use warnings;
 use Moo;
-use Types::Standard qw(Str ArrayRef);
+use Types::Standard       qw(Str ArrayRef);
 use Email::Sender::Simple qw(sendmail);
 use Email::Simple;
 use Email::Simple::Creator;
 
 extends 'Linux::Inotify2::WatchDir::Simple::Action';
 
-=head1 NAME
-
-Linux::Inotify2::WatchDir::Simple::Action::Email - Email notification action
-
-=head1 SYNOPSIS
-
-    # In YAML config:
-    actions:
-      - type: email
-        to: "admin@example.com"
-        subject: "File changed: %file%"
-        body: |
-          Event: %event%
-          File: %fullpath%
-          Time: %timestamp%
-
-=head1 DESCRIPTION
-
-Sends email notifications for filesystem events using Email::Sender.
-
-=head1 ATTRIBUTES
-
-=cut
-
 has 'to' => (
-    is       => 'lazy',
-    isa      => ArrayRef[Str],
-    builder  => '_build_to',
+    is      => 'lazy',
+    isa     => ArrayRef [Str],
+    builder => '_build_to',
 );
 
 has 'from' => (
@@ -64,11 +40,12 @@ sub _build_to {
     my @recipients;
 
     # Get from action config
-    if ($self->config->{to}) {
+    if ( $self->config->{to} ) {
         my $to = $self->config->{to};
-        if (ref $to eq 'ARRAY') {
+        if ( ref $to eq 'ARRAY' ) {
             push @recipients, @$to;
-        } else {
+        }
+        else {
             push @recipients, $to;
         }
     }
@@ -129,24 +106,14 @@ This is an automated message from ywatch.
 END_BODY
 }
 
-=head1 METHODS
-
-=cut
-
-=head2 execute
-
-Sends email notification about the event.
-
-=cut
-
 sub execute {
-    my ($self, $context) = @_;
+    my ( $self, $context ) = @_;
 
-    my $subject = $self->expand_variables($self->subject, $context);
-    my $body = $self->expand_variables($self->body, $context);
-    my $from = $self->from;
+    my $subject = $self->expand_variables( $self->subject, $context );
+    my $body    = $self->expand_variables( $self->body,    $context );
+    my $from    = $self->from;
 
-    foreach my $to (@{$self->to}) {
+    foreach my $to ( @{ $self->to } ) {
         eval {
             my $email = Email::Simple->create(
                 header => [
@@ -167,6 +134,38 @@ sub execute {
         }
     }
 }
+
+1;
+
+__END__
+
+=head1 NAME
+
+Linux::Inotify2::WatchDir::Simple::Action::Email - Email notification action
+
+=head1 SYNOPSIS
+
+    # In YAML config:
+    actions:
+      - type: email
+        to: "admin@example.com"
+        subject: "File changed: %file%"
+        body: |
+          Event: %event%
+          File: %fullpath%
+          Time: %timestamp%
+
+=head1 DESCRIPTION
+
+Sends email notifications for filesystem events using Email::Sender.
+
+=head1 ATTRIBUTES
+
+=head1 METHODS
+
+=head2 execute
+
+Sends email notification about the event.
 
 =head1 TRANSPORT CONFIGURATION
 
@@ -193,5 +192,3 @@ This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-
-1;

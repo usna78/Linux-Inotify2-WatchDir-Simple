@@ -2,13 +2,17 @@ use strict;
 use warnings;
 use ExtUtils::MakeMaker;
 
-WriteMakefile(
+my %WriteMakefileArgs = (
     NAME             => 'Linux::Inotify2::WatchDir::Simple',
     AUTHOR           => 'OpenTransfer Project',
     VERSION_FROM     => 'lib/Linux/Inotify2/WatchDir/Simple.pm',
     ABSTRACT         => 'Simple polling-based filesystem monitoring with YAML/JSON config',
     LICENSE          => 'perl_5',
     MIN_PERL_VERSION => '5.010',
+
+    CONFIGURE_REQUIRES => {
+        'ExtUtils::MakeMaker' => '6.64',
+    },
 
     PREREQ_PM => {
         # Core inotify interface
@@ -40,11 +44,6 @@ WriteMakefile(
         'Carp'              => 0,
     },
 
-    RECOMMENDS => {
-        # For JSON configuration support
-        'JSON::PP'          => '4.00',
-    },
-
     TEST_REQUIRES => {
         'Test::More'        => '0.98',
         'Test::Exception'   => '0.43',
@@ -53,6 +52,10 @@ WriteMakefile(
 
     META_MERGE => {
         'meta-spec' => { version => 2 },
+        recommends => {
+            # For JSON configuration support (uses JSON::XS if available, falls back to JSON::PP)
+            'JSON'              => '4.00',
+        },
         resources => {
             repository => {
                 type => 'git',
@@ -88,3 +91,7 @@ WriteMakefile(
         FILES => 'Linux-Inotify2-WatchDir-Simple-*',
     },
 );
+
+# Note: RECOMMENDS is specified in META_MERGE -> recommends above
+# This will be written to META.json/META.yml for CPAN clients to use
+WriteMakefile(%WriteMakefileArgs);

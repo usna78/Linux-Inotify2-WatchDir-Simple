@@ -4,30 +4,9 @@ use strict;
 use warnings;
 use Moo;
 use Types::Standard qw(Str);
-use Sys::Syslog qw(:standard :macros);
+use Sys::Syslog     qw(:standard :macros);
 
 extends 'Linux::Inotify2::WatchDir::Simple::Action';
-
-=head1 NAME
-
-Linux::Inotify2::WatchDir::Simple::Action::Syslog - Syslog logging action
-
-=head1 SYNOPSIS
-
-    # In YAML config:
-    actions:
-      - type: syslog
-        priority: info
-        facility: local0
-        message: "File %event%: %fullpath%"
-
-=head1 DESCRIPTION
-
-Logs filesystem events to syslog.
-
-=head1 ATTRIBUTES
-
-=cut
 
 has 'priority' => (
     is      => 'lazy',
@@ -78,24 +57,14 @@ sub _build_ident {
     return $self->config->{ident} || 'ywatch';
 }
 
-=head1 METHODS
-
-=cut
-
-=head2 execute
-
-Logs the event to syslog.
-
-=cut
-
 sub execute {
-    my ($self, $context) = @_;
+    my ( $self, $context ) = @_;
 
-    my $message = $self->expand_variables($self->message, $context);
+    my $message = $self->expand_variables( $self->message, $context );
 
     # Open syslog if not already open
-    unless ($self->_syslog_opened) {
-        openlog($self->ident, 'pid', $self->facility);
+    unless ( $self->_syslog_opened ) {
+        openlog( $self->ident, 'pid', $self->facility );
         $self->_syslog_opened(1);
     }
 
@@ -113,18 +82,47 @@ sub execute {
         'debug'   => LOG_DEBUG,
     );
 
-    my $priority_level = $priority_map{lc($self->priority)} || LOG_INFO;
+    my $priority_level = $priority_map{ lc( $self->priority ) } || LOG_INFO;
 
-    syslog($priority_level, '%s', $message);
+    syslog( $priority_level, '%s', $message );
 }
 
 sub DEMOLISH {
     my $self = shift;
 
-    if ($self->_syslog_opened) {
+    if ( $self->_syslog_opened ) {
         closelog();
     }
 }
+
+1;
+
+__END__
+
+=head1 NAME
+
+Linux::Inotify2::WatchDir::Simple::Action::Syslog - Syslog logging action
+
+=head1 SYNOPSIS
+
+    # In YAML config:
+    actions:
+      - type: syslog
+        priority: info
+        facility: local0
+        message: "File %event%: %fullpath%"
+
+=head1 DESCRIPTION
+
+Logs filesystem events to syslog.
+
+=head1 ATTRIBUTES
+
+=head1 METHODS
+
+=head2 execute
+
+Logs the event to syslog.
 
 =head1 AUTHOR
 
@@ -136,5 +134,3 @@ This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-
-1;

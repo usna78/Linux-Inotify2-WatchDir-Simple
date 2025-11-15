@@ -31,13 +31,12 @@ ywatch - Simple filesystem monitoring tool
 
 =head1 DESCRIPTION
 
-ywatch is a simple, polling-based filesystem monitoring tool that watches
-directories for changes and triggers configurable actions (email, syslog,
-commands).
+ywatch is a simple filesystem monitoring tool that watches directories for
+changes and triggers configurable actions (email, syslog, commands).
 
-This tool uses a straightforward 1-second polling approach, making it perfect
-for configuration file monitoring, batch file processing, and other scenarios
-where sub-second response time is not critical.
+This tool uses Linux inotify for efficient, event-driven filesystem monitoring,
+making it perfect for configuration file monitoring, batch file processing, and
+other scenarios requiring reliable change detection.
 
 The name "ywatch" stands for "YAML watch" though both YAML and JSON configuration
 formats are supported.
@@ -240,22 +239,23 @@ Then:
 
 =head1 PERFORMANCE
 
-This tool uses a simple polling approach with 1-second intervals. This is:
+This tool uses Linux inotify for efficient, event-driven filesystem monitoring:
 
 =over 4
 
-=item * Perfect for configuration file monitoring (changes are infrequent)
+=item * Events are detected immediately when they occur (no polling delay)
 
-=item * Suitable for batch file processing directories
+=item * Very low CPU usage (process blocks waiting for kernel events)
 
-=item * Low CPU usage (process sleeps between polls)
+=item * Suitable for high-frequency events and real-time monitoring
 
-=item * Not suitable for high-frequency events or sub-second requirements
+=item * Scales well to monitoring many directories
 
 =back
 
-For real-time monitoring needs, consider the future Linux::Inotify2::WatchDir::Event
-module or use Linux::Inotify2 directly with an event loop.
+The blocking design provides excellent responsiveness while maintaining minimal
+resource usage. For integration with event loops or asynchronous frameworks,
+use Linux::Inotify2 directly.
 
 =head1 SEE ALSO
 
