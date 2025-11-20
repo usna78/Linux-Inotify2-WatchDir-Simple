@@ -243,6 +243,8 @@ sudo journalctl -u ywatch@monitor.service -f
 # Reload configuration
 sudo systemctl reload ywatch@monitor.service
 
+**SELinux Systems (RHEL/Rocky/CentOS):** If you're running on a system with SELinux enabled, additional configuration is required. See [README_SELinux.md](README_SELinux.md) for detailed setup instructions including file permissions, SELinux contexts, and email delivery configuration.
+
 The @ syntax allows multiple instances:
 
 systemctl start ywatch@config-monitor.service
@@ -340,6 +342,10 @@ sudo sysctl -p
 Run with --validate and --debug to see detailed error messages:
 
 ywatch --config /path/to/config.yml --validate --debug
+
+"Permission denied" on systemd startup (SELinux)
+
+If you see `Failed at step EXEC spawning /usr/local/bin/ywatch: Permission denied` on RHEL-based systems, this is typically an SELinux or file permission issue. See [README_SELinux.md](README_SELinux.md) for complete troubleshooting steps.
 
 Examples
 

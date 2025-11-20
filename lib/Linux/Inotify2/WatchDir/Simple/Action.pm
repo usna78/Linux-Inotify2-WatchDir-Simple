@@ -50,6 +50,7 @@ sub expand_variables {
     $expanded =~ s/%timestamp%/$context->{timestamp} || ''/eg;
     $expanded =~ s/%watchlist%/$context->{watchlist} || ''/eg;
     $expanded =~ s/%pid%/$context->{pid} || ''/eg;
+    $expanded =~ s/%hostname%/$context->{hostname} || ''/eg;
 
     return $expanded;
 }
@@ -113,6 +114,8 @@ Context hash contains:
     fullpath   => Full file path
     timestamp  => Event timestamp
     watchlist  => Watchlist name
+    pid        => Process ID
+    hostname   => Server hostname
 
 =head2 expand_variables
 
@@ -128,6 +131,7 @@ Variables:
     %timestamp% => Timestamp
     %watchlist% => Watchlist name
     %pid%       => Process ID
+    %hostname%  => Server hostname
 
 =head2 get_contacts
 

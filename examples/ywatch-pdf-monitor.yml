@@ -17,10 +17,17 @@ startup_actions:
   - type: syslog
     priority: info
     facility: local0
-    message: "PDF Documentation Monitor (PID: %pid%) started - watching /home/openxfer/test/ywatch/inbound"
+    message: "On server %hostname%, PDF Documentation Monitor (PID: %pid%) started\n - watching /home/openxfer/test/ywatch/inbound"
   - type: console
     level: INFO
     format: "PDF Monitor is now running - PID: %pid%"
+
+# Email defaults
+email:
+  from: "openxfer@localhost"
+#  smtp_host: "localhost"
+#  smtp_port: 25
+
 
 # Watchlist definitions
 watchlists:
@@ -58,3 +65,23 @@ watchlists:
             execute: "/home/openxfer/OpenTransfer/bin/opentransfer.pl --config-id=16"
             async: true
             timeout: 300
+
+          - type: email
+            from: "openxfer@localhost"
+            to: "russ@opentransfer.net"
+            subject: "File delivered to server %hostname%: %file% at %timestamp%"
+            body: |
+              Test from silent development server
+              Your file has been successfully delivered:
+
+              On Server: %hostname%
+              Event:     %event%
+              File:      %file%
+              Path:      %path%
+              Full Path: %fullpath%
+              Time:      %timestamp%
+              Watchlist: %watchlist%
+              PID:       %pid%
+
+              Thank you for using OpenTransfer.
+

@@ -9,6 +9,7 @@ use File::Spec;
 use File::Find;
 use File::Basename;
 use POSIX qw(strftime);
+use Sys::Hostname;
 
 use Linux::Inotify2::WatchDir::Simple::Filter;
 use Linux::Inotify2::WatchDir::Simple::Action;
@@ -85,6 +86,7 @@ sub execute_startup_actions {
         timestamp => strftime( "%Y-%m-%d %H:%M:%S", localtime ),
         watchlist => $self->config->data->{name} || 'ywatch',
         pid       => $$,
+        hostname  => hostname(),
     };
 
     # Execute startup actions
@@ -366,6 +368,8 @@ sub _handle_event {
         fullpath  => $fullpath,
         timestamp => strftime( "%Y-%m-%d %H:%M:%S", localtime ),
         watchlist => $watchlist->{name},
+        pid       => $$,
+        hostname  => hostname(),
     };
 
     # Execute actions

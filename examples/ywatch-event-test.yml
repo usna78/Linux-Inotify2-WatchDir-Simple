@@ -1,0 +1,67 @@
+---
+# Event Testing Configuration
+# Tests all available inotify events with console and email notifications
+
+name: "Event Test Monitor"
+pidfile: "/home/openxfer/test/ywatch/pid/event_test.pid"
+
+# Logging configuration
+logging:
+  level: INFO
+  console: true
+  file: "/home/openxfer/test/ywatch/logs/event-test.log"
+
+# Email defaults
+email:
+  from: "openxfer@localhost"
+
+# Watchlist to test all event types
+watchlists:
+  - name: "all_events_test"
+    description: "Test all inotify event types"
+    enabled: true
+
+    watches:
+      - path: "/home/openxfer/test/ywatch/event_test"
+        recursive: true
+
+        # Monitor ALL event types
+        events:
+          - create
+          - modify
+          - delete
+          - move_from
+          - move_to
+          - close_write
+          - attrib
+          - open
+          - close
+          - access
+
+        # No filters - monitor all files
+        filters:
+          include: ''
+
+        actions:
+          # Console output for immediate feedback
+          - type: console
+            level: INFO
+            format: "[%hostname%:%pid%] %event% detected: %file% at %timestamp%"
+
+          # Email notification with all variables
+          - type: email
+            to: "russ@opentransfer.net"
+            subject: "[%hostname%] Event test: %event% on %file%"
+            body: |
+              Event Test Results:
+
+              Event:     %event%
+              File:      %file%
+              Path:      %path%
+              Full Path: %fullpath%
+              Time:      %timestamp%
+              Host:      %hostname%
+              PID:       %pid%
+              Watchlist: %watchlist%
+
+              This is an automated event test from ywatch.
